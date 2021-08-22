@@ -192,11 +192,17 @@ public class AStarSearch {
             tile.setNum(i);
             i ++;
         }
+
+        // 清空两个列表
+        openList.clear();
+        closeList.clear();
+
         System.out.println(way);
         // 求最短路径
         int[][] tileTable = new int[way.size()][way.size()];
         List<Tile> handledList = new ArrayList<>();
         for (Tile tile : way) {
+            System.out.println(tile);
             // 前后左后相邻的4个端点
             Tile left = getLeftTile(tile);
             Tile right = getRightTile(tile);
@@ -238,6 +244,8 @@ public class AStarSearch {
             }
             System.out.println();
         }
+
+        // 
 
         return way;
     }
