@@ -1,6 +1,7 @@
 package com.algorithm;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AStarSearch {
 
@@ -84,7 +85,7 @@ public class AStarSearch {
 
         @Override
         public String toString() {
-            return "[" + (xIndex + " | " + yIndex + ", ") + (isBlocked ? (1 + "") : (0+ "")) + "]";
+            return "[" + (xIndex + " | " + yIndex + ", ") + (isBlocked ? (1 + "") : (0+ "")) + ", " + num + "]";
         }
 
         @Override
@@ -106,7 +107,7 @@ public class AStarSearch {
 
         @Override
         public int hashCode() {
-            return Objects.hash(xIndex, yIndex, isBlocked, parentTile, distanceToEnd, distanceToStart);
+            return Objects.hash(xIndex, yIndex);
         }
 
         private int getF () {
@@ -238,16 +239,133 @@ public class AStarSearch {
             }
         }
 
+        System.out.println(way);
+
         for (int ii = 0; ii < way.size(); ii ++) {
             for (int jj = 0; jj < way.size(); jj ++) {
                 System.out.print(tileTable[ii][jj] + "\t");
             }
-            System.out.println();
+            System.out.println(tileTable);
         }
 
-        // 
+
+
+        // 从start节点计算所有到end的通路，并计算其最短路径
+        getBestWay(tileTable, way);
+
+        map.forEach(line -> {
+            line.forEach(tile -> {
+                if (tile == startTile) {
+                    System.out.print("ST\t");
+                } else if (tile == endTile) {
+                    System.out.print("ED\t");
+                } else {
+                    System.out.print(tile.isBlocked ? "||\t" : tile.isOnWay() ? "()\t" : "::\t");
+                }
+            });
+            System.out.println();
+        });
 
         return way;
+    }
+
+    public static void getBestWay (int[][] tileTable, List<Tile> way) {
+        List<Tile> S = new ArrayList<>();
+        List<Tile> T = new ArrayList<>();
+        S.add(startTile);
+        T.addAll(way);
+        T.remove(startTile);
+        HashMap<Integer, Integer> lastRes = new HashMap<>();
+        HashMap<Integer, String> nodeMinWay = new HashMap<>();
+        int flag = 0;
+        while (T.size() > 0) {
+            HashMap<Integer, Integer> currentRes = new HashMap<>();
+            if (flag != 0) {
+                Map.Entry<Integer, Integer> minEntry = getMinEntry(lastRes, S);
+                int minNodeNum = minEntry.getKey();
+                int minNodeValue = minEntry.getValue();
+                Tile minNode = getNodeByNum(way, minNodeNum);
+                System.out.println(minNode);
+                System.out.println("S : " + S);
+                for (int i = 1; i < way.size(); i ++) {
+                    if (S.stream().map(x -> {return x.getNum();}).collect(Collectors.toList()).contains(i)) {
+                        // i已经处理过，不再处理
+//                        System.out.print("i在已处理列表里：" + i + "\t");
+                        currentRes.put(i, lastRes.get(i));
+                    } else {
+                        if (tileTable[minNodeNum][i] != 0) {
+                            // 当前节点到i节点可达，
+                            int currentValue = tileTable[minNodeNum][i] + minNodeValue;
+                            if (currentValue < lastRes.get(i)) {
+                                nodeMinWay.put(i, nodeMinWay.get(minNodeNum) + "," + i);
+                                currentRes.put(i, currentValue);
+                            } else {
+                                currentRes.put(i, lastRes.get(i));
+                            }
+                        } else {
+                            // 当前节点到i节点不可达
+                            currentRes.put(i, lastRes.get(i));
+                        }
+                    }
+                }
+                System.out.println(currentRes);
+                T.remove(minNode);
+                S.add(minNode);
+
+            } else {
+                for (int i = 1; i < way.size(); i ++) {
+                    currentRes.put(i, tileTable[startTile.getNum()][i] == 0 ? Integer.MAX_VALUE : tileTable[startTile.getNum()][i]);
+                    nodeMinWay.put(i, "0," + i);
+                }
+                flag = 1;
+
+            }
+            lastRes = currentRes;
+            System.out.println("nodeMinWay : " + nodeMinWay);
+            System.out.println(T.size() + "," + S.size());
+        }
+        System.out.println(lastRes);
+        System.out.println(nodeMinWay);
+        System.out.println(S);
+
+        for (Tile tile : way) {
+            if (!Arrays.stream(nodeMinWay.get(endTile.getNum()).split(",")).collect(Collectors.toList()).contains(tile.getNum() + "")) {
+                tile.setOnWay(false);
+            }
+        }
+    }
+
+
+    public static Map.Entry<Integer, Integer> getMinEntry (HashMap<Integer, Integer> hashMap, List<Tile> exceptList) {
+        int minValue = Integer.MAX_VALUE;
+        Map.Entry<Integer, Integer> minEntry = null;
+        for (Map.Entry<Integer, Integer> entry : hashMap.entrySet()) {
+            // 排除空的和已处理的
+            if (entry.getValue() == null
+                    || exceptList.stream().map(x -> {return x.getNum();}).collect(Collectors.toList()).contains(entry.getKey())) {
+                continue;
+            }
+            if (entry.getValue() < minValue) {
+                minValue = entry.getValue();
+                minEntry = entry;
+            }
+        }
+        return minEntry;
+    }
+
+    /**
+     * 获取指定编号的节点
+     * @param tiles
+     * @param num
+     * @return
+     */
+    public static Tile getNodeByNum (List<Tile> tiles, int num) {
+        for (Tile tile : tiles) {
+            if (tile.getNum() == num) {
+                return tile;
+            }
+        }
+        return null;
     }
 
     /**
@@ -390,23 +508,12 @@ public class AStarSearch {
         });
 
         // 初始化开始节点
-        startTile = map.get(5).get(2);
+        startTile = map.get(7).get(2);
         // 初始化结束节点
-        endTile = map.get(4).get(8);
+        endTile = map.get(5).get(9);
         findWay();
 
-        map.forEach(line -> {
-            line.forEach(tile -> {
-                if (tile == startTile) {
-                    System.out.print("ST\t");
-                } else if (tile == endTile) {
-                    System.out.print("ED\t");
-                } else {
-                    System.out.print(tile.isBlocked ? "||\t" : tile.isOnWay() ? "()\t" : "::\t");
-                }
-            });
-            System.out.println();
-        });
+
     }
 
 }
