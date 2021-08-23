@@ -120,13 +120,24 @@ public class AStarSearch {
      */
     static List<List<Tile>> map = new ArrayList<>();
 
+    public static Tile getFMinimalTile () {
+        Tile minTile = openList.get(0);
+        for (Tile tile : openList) {
+            if (tile.getF() < minTile.getF()) {
+                minTile = tile;
+            }
+        }
+        return minTile;
+    }
+
+
+
     /**
      * 寻路
      * @return
      */
     public static List<Tile> findWay () {
         // 先将开始节点添加到closeList
-        closeList.add(startTile);
         openList.add(startTile);
         Tile currentTile;
         // 一直循环，直到endTile出现在openList中
@@ -134,13 +145,11 @@ public class AStarSearch {
             if (openList.size() == 0) {
                 return new ArrayList<>();
             }
-            Tile minTile = openList.stream().min((a, b) -> {return a.getF() < b.getF() ? -1 : 1;}).get();
+            Tile minTile = getFMinimalTile();
+            System.out.println(minTile);
             openList.remove(minTile);
             closeList.add(minTile);
             currentTile = minTile;
-
-            System.out.println(closeList);
-            System.out.println(currentTile);
 
             // 计算当前节点的上下左右节点
             Tile left = getLeftTile(currentTile);
@@ -149,28 +158,75 @@ public class AStarSearch {
             Tile bottom = getBottomTile(currentTile);
 
             if (left != null) {
-                openList.add(left);
-                if (openList.contains(left)) {
-                    left.setParentTile(currentTile);
+                // 判断是否在openList中,在的话重新计算F值
+                if (!openList.contains(left)) {
+                    left.setDistanceToStart(getTileToStartTileDistance(left));
+                    openList.add(left);
+                } else {
+                    // 更新F值
+                    int leftG = left.getDistanceToStart();
+                    int currentG = currentTile.getDistanceToStart() + 1;
+                    if (currentG < leftG) {
+                        left.setDistanceToStart(currentG);
+                        left.setParentTile(currentTile);
+                    }
                 }
+
+//                if (openList.contains(left)) {
+//                    left.setParentTile(currentTile);
+//                }
             }
             if (right != null) {
                 openList.add(right);
-                if (openList.contains(right)) {
-                    right.setParentTile(currentTile);
+                if (!openList.contains(right)) {
+                    right.setDistanceToStart(getTileToStartTileDistance(right));
+                    openList.add(right);
+                } else {
+                    // 更新F值
+                    int rightG = right.getDistanceToStart();
+                    int currentG = currentTile.getDistanceToStart() + 1;
+                    if (currentG < rightG) {
+                        right.setDistanceToStart(currentG);
+                        right.setParentTile(currentTile);
+                    }
                 }
+//                if (openList.contains(right)) {
+//                    right.setParentTile(currentTile);
+//                }
             }
             if (top != null) {
-                openList.add(top);
-                if (openList.contains(top)) {
-                    top.setParentTile(currentTile);
+                if (!openList.contains(top)) {
+                    top.setDistanceToStart(getTileToStartTileDistance(top));
+                    openList.add(top);
+                } else {
+                    // 更新F值
+                    int topG = top.getDistanceToStart();
+                    int currentG = currentTile.getDistanceToStart() + 1;
+                    if (currentG < topG) {
+                        top.setDistanceToStart(currentG);
+                        top.setParentTile(currentTile);
+                    }
                 }
+
+//                if (openList.contains(top)) {
+//                    top.setParentTile(currentTile);
+//                }
             }
             if (bottom != null) {
-                openList.add(bottom);
-                if (openList.contains(bottom)) {
-                    bottom.setParentTile(currentTile);
+                if (!openList.contains(bottom)) {
+                    bottom.setDistanceToStart(getTileToStartTileDistance(bottom));
+                    openList.add(bottom);
+                } else {
+                    int bottomG = bottom.getDistanceToStart();
+                    int currentG = currentTile.getDistanceToStart() + 1;
+                    if (currentG < bottomG) {
+                        bottom.setDistanceToStart(currentG);
+                        bottom.setParentTile(currentTile);
+                    }
                 }
+//                if (openList.contains(bottom)) {
+//                    bottom.setParentTile(currentTile);
+//                }
             }
 
         }
@@ -183,7 +239,6 @@ public class AStarSearch {
             currentTile.setOnWay(true);
             currentTile = currentTile.getParentTile();
         }
-        System.out.println(way);
 
         // way可能不是最优的走法，在way中规划出n条ST到ED的路，选取最短的一条
         // 反转way（从起点到终点）
@@ -194,22 +249,26 @@ public class AStarSearch {
             i ++;
         }
 
+
+
+
+
+
+
+
         // 清空两个列表
         openList.clear();
         closeList.clear();
 
-        System.out.println(way);
         // 求最短路径
         int[][] tileTable = new int[way.size()][way.size()];
         List<Tile> handledList = new ArrayList<>();
         for (Tile tile : way) {
-            System.out.println(tile);
             // 前后左后相邻的4个端点
             Tile left = getLeftTile(tile);
             Tile right = getRightTile(tile);
             Tile top = getTopTile(tile);
             Tile bottom = getBottomTile(tile);
-            System.out.println(left + "," + right + "," + top + "," + bottom);
             // 加入到已处理的列表中，防止下一个节点又重复遍历
             handledList.add(tile);
             if (left != null) {
@@ -227,7 +286,6 @@ public class AStarSearch {
             if (top != null) {
                 // 说明tile节点到top可直达
                 if (way.contains(top) && !handledList.contains(top)) {
-                    System.out.println(tile.getNum() + ", " + top.getNum());
                     tileTable[tile.getNum()][top.getNum()] = 1;
                 }
             }
@@ -239,19 +297,9 @@ public class AStarSearch {
             }
         }
 
-        System.out.println(way);
-
-        for (int ii = 0; ii < way.size(); ii ++) {
-            for (int jj = 0; jj < way.size(); jj ++) {
-                System.out.print(tileTable[ii][jj] + "\t");
-            }
-            System.out.println(tileTable);
-        }
-
-
 
         // 从start节点计算所有到end的通路，并计算其最短路径
-        getBestWay(tileTable, way);
+//        getBestWay(tileTable, way);
 
         map.forEach(line -> {
             line.forEach(tile -> {
@@ -285,12 +333,9 @@ public class AStarSearch {
                 int minNodeNum = minEntry.getKey();
                 int minNodeValue = minEntry.getValue();
                 Tile minNode = getNodeByNum(way, minNodeNum);
-                System.out.println(minNode);
-                System.out.println("S : " + S);
                 for (int i = 1; i < way.size(); i ++) {
                     if (S.stream().map(x -> {return x.getNum();}).collect(Collectors.toList()).contains(i)) {
                         // i已经处理过，不再处理
-//                        System.out.print("i在已处理列表里：" + i + "\t");
                         currentRes.put(i, lastRes.get(i));
                     } else {
                         if (tileTable[minNodeNum][i] != 0) {
@@ -308,7 +353,6 @@ public class AStarSearch {
                         }
                     }
                 }
-                System.out.println(currentRes);
                 T.remove(minNode);
                 S.add(minNode);
 
@@ -318,11 +362,10 @@ public class AStarSearch {
                     nodeMinWay.put(i, "0," + i);
                 }
                 flag = 1;
-
             }
+//            System.out.println("currentRes : " + currentRes);
             lastRes = currentRes;
-            System.out.println("nodeMinWay : " + nodeMinWay);
-            System.out.println(T.size() + "," + S.size());
+//            System.out.println("nodeMinWay : " + nodeMinWay + "\n");
         }
         System.out.println(lastRes);
         System.out.println(nodeMinWay);
@@ -386,7 +429,7 @@ public class AStarSearch {
             return null;
         }
         leftTile.setParentTile(tile);
-        leftTile.setDistanceToStart(getTileToStartTileDistance(leftTile));
+//        leftTile.setDistanceToStart(getTileToStartTileDistance(leftTile));
         leftTile.setDistanceToEnd(getTileToEndTileDistance(leftTile));
         return leftTile;
     }
@@ -409,24 +452,9 @@ public class AStarSearch {
             return null;
         }
         rightTile.setParentTile(tile);
-        rightTile.setDistanceToStart(getTileToStartTileDistance(rightTile));
+//        rightTile.setDistanceToStart(getTileToStartTileDistance(rightTile));
         rightTile.setDistanceToEnd(getTileToEndTileDistance(rightTile));
         return rightTile;
-    }
-
-    public static int getTileToEndTileDistance (Tile tile) {
-        int tileXIndex = tile.getXIndex();
-        int tileYIndex = tile.getYIndex();
-        int endTileXIndex = endTile.getXIndex();
-        int endTileYIndex = endTile.getYIndex();
-        return Math.abs((endTileXIndex - tileXIndex)) + Math.abs((endTileYIndex - tileYIndex));
-    }
-    public static int getTileToStartTileDistance (Tile tile) {
-        int tileXIndex = tile.getXIndex();
-        int tileYIndex = tile.getYIndex();
-        int startTileXIndex = startTile.getXIndex();
-        int startTileYIndex = startTile.getYIndex();
-        return Math.abs((startTileXIndex - tileXIndex)) + Math.abs((startTileYIndex - tileYIndex));
     }
 
     /**
@@ -447,7 +475,7 @@ public class AStarSearch {
             return null;
         }
         topTile.setParentTile(tile);
-        topTile.setDistanceToStart(getTileToStartTileDistance(topTile));
+//        topTile.setDistanceToStart(getTileToStartTileDistance(topTile));
         topTile.setDistanceToEnd(getTileToEndTileDistance(topTile));
         return topTile;
     }
@@ -470,11 +498,26 @@ public class AStarSearch {
             return null;
         }
         bottomTile.setParentTile(tile);
-        bottomTile.setDistanceToStart(getTileToStartTileDistance(bottomTile));
+//        bottomTile.setDistanceToStart(getTileToStartTileDistance(bottomTile));
         bottomTile.setDistanceToEnd(getTileToEndTileDistance(bottomTile));
         return bottomTile;
     }
 
+
+    public static int getTileToEndTileDistance (Tile tile) {
+        int tileXIndex = tile.getXIndex();
+        int tileYIndex = tile.getYIndex();
+        int endTileXIndex = endTile.getXIndex();
+        int endTileYIndex = endTile.getYIndex();
+        return Math.abs((endTileXIndex - tileXIndex)) + Math.abs((endTileYIndex - tileYIndex));
+    }
+    public static int getTileToStartTileDistance (Tile tile) {
+        int tileXIndex = tile.getXIndex();
+        int tileYIndex = tile.getYIndex();
+        int startTileXIndex = startTile.getXIndex();
+        int startTileYIndex = startTile.getYIndex();
+        return Math.abs((startTileXIndex - tileXIndex)) + Math.abs((startTileYIndex - tileYIndex));
+    }
 
 
     public static void main(String[] args) {
@@ -483,16 +526,16 @@ public class AStarSearch {
         /**
          * 填充地图
          */
-        for (int j = 0; j < 10; j ++) {
+        for (int j = 0; j < 20; j ++) {
             List<Tile> line = new ArrayList<>();
-            for (int i = 0; i < 10; i ++) {
+            for (int i = 0; i < 20; i ++) {
                 Tile tile = aStarSearch.new Tile();
                 // 设置横坐标
                 tile.setXIndex(i);
                 // 设置纵坐标
                 tile.setYIndex(j);
                 // 设置障碍
-                if (j > 1 && j < 10 && i == 5) {
+                if (j > 1 && j < 20 && i == 10) {
                     tile.setIsBlocked(true);
                 }
                 line.add(tile);
@@ -500,19 +543,13 @@ public class AStarSearch {
             map.add(line);
         }
 
-        map.forEach(line -> {
-            line.forEach(tile -> {
-                System.out.print(tile.toString() + "\t");
-            });
-            System.out.println();
-        });
-
         // 初始化开始节点
-        startTile = map.get(7).get(2);
+        startTile = map.get(10).get(3);
         // 初始化结束节点
-        endTile = map.get(5).get(9);
+        endTile = map.get(17).get(19);
+        long startTime = System.currentTimeMillis();
         findWay();
-
+        System.out.println("time : " + (System.currentTimeMillis() - startTime));
 
     }
 
