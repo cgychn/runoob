@@ -1,5 +1,7 @@
 package com.algorithm;
 
+import sun.reflect.generics.tree.Tree;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -8,10 +10,63 @@ public class AStarSearch {
     static Tile startTile;
     static Tile endTile;
 
+    static int[][] tileTable;
+
+    static AStarSearch aStarSearch;
+    static TreeNode tree;
+
     // 待处理点集合
     static List<Tile> openList = new ArrayList<>();
     // 处理完毕的点集合
     static List<Tile> closeList = new ArrayList<>();
+
+    public class TreeNode {
+        Tile tile;
+        int distanceFromParentToCurrent = 0;
+        List<TreeNode> children = new ArrayList<>();
+        TreeNode parent;
+
+        public TreeNode getParent() {
+            return parent;
+        }
+
+        public void setParent(TreeNode parent) {
+            this.parent = parent;
+        }
+
+        public Tile getTile() {
+            return tile;
+        }
+
+        public void setTile(Tile tile) {
+            this.tile = tile;
+        }
+
+        public int getDistanceFromParentToCurrent() {
+            return distanceFromParentToCurrent;
+        }
+
+        public void setDistanceFromParentToCurrent(int distanceFromParentToCurrent) {
+            this.distanceFromParentToCurrent = distanceFromParentToCurrent;
+        }
+
+        public List<TreeNode> getChildren() {
+            return children;
+        }
+
+        public void setChildren(List<TreeNode> children) {
+            this.children = children;
+        }
+
+        @Override
+        public String toString() {
+            return "TreeNode{" +
+                    "tile=" + tile +
+                    ", distanceFromParentToCurrent=" + distanceFromParentToCurrent +
+                    ", children=" + children +
+                    '}';
+        }
+    }
 
     /**
      * 瓦片实体
@@ -297,6 +352,7 @@ public class AStarSearch {
             }
         }
 
+        AStarSearch.tileTable = tileTable;
 
         // 从start节点计算所有到end的通路，并计算其最短路径
 //        getBestWay(tileTable, way);
@@ -314,9 +370,113 @@ public class AStarSearch {
             System.out.println();
         });
 
+        changeGraphToTree(way);
+        System.out.println(tree.getChildren().get(0).getChildren().size());
+        LinkedList<LinkedList<TreeNode>> ways1 = genWayWithBFS(tree);
+        LinkedList<LinkedList<TreeNode>> ways2 = genWayWithDFS(tree);
+//
+        for (LinkedList<TreeNode> linkedList : ways1) {
+            System.out.println(linkedList.stream().map(x -> {return "{" + x.getTile().getNum() + " | " + x.getDistanceFromParentToCurrent() + "}";}).collect(Collectors.toList()));
+        }
+//
+        for (LinkedList<TreeNode> linkedList : ways2) {
+            System.out.println(linkedList.stream().map(x -> {return "{" + x.getTile().getNum() + " | " + x.getDistanceFromParentToCurrent() + "}";}).collect(Collectors.toList()));
+        }
+
+
+
         return way;
     }
 
+
+    public static void changeGraphToTree (List<Tile> way) {
+        Tile firstTile = getNodeByNum(way, 0);
+        TreeNode treeNode = aStarSearch.new TreeNode();
+        treeNode.setTile(firstTile);
+
+        List<TreeNode> toCheckTiles = new LinkedList<>();
+        toCheckTiles.add(treeNode);
+        while (!toCheckTiles.isEmpty()) {
+            TreeNode node = toCheckTiles.remove(0);
+            for (int i =0; i < way.size(); i ++) {
+                if (tileTable[node.getTile().getNum()][i] == 1) {
+                    TreeNode subNode = aStarSearch.new TreeNode();
+                    subNode.setTile(getNodeByNum(way, i));
+                    subNode.setDistanceFromParentToCurrent(1);
+                    subNode.setParent(node);
+                    node.getChildren().add(subNode);
+                    toCheckTiles.add(subNode);
+                }
+            }
+        }
+        System.out.println("treeNode : " + treeNode);
+        AStarSearch.tree = treeNode;
+    }
+
+    /**
+     * 深度优先生成ways
+     * @param node
+     */
+    public static LinkedList<LinkedList<TreeNode>> genWayWithDFS (TreeNode node) {
+        LinkedList<LinkedList<TreeNode>> ways = new LinkedList<>();
+        DFSSearch(node, ways);
+        return ways;
+    }
+
+    private static void DFSSearch (TreeNode node, LinkedList<LinkedList<TreeNode>> ways) {
+        if (node.getChildren().isEmpty()) {
+            LinkedList<TreeNode> way = new LinkedList<>();
+            TreeNode current = node;
+            while (current != null) {
+                way.add(0, current);
+                current = current.getParent();
+            }
+            ways.add(way);
+        }
+        for (TreeNode treeNode : node.getChildren()) {
+            DFSSearch(treeNode, ways);
+        }
+    }
+
+    /**
+     * 广度优先生成ways
+     * @param node
+     */
+    public static LinkedList<LinkedList<TreeNode>> genWayWithBFS (TreeNode node) {
+        LinkedList<LinkedList<TreeNode>> ways = new LinkedList<>();
+        List<TreeNode> todoNodes = new LinkedList<>();
+        List<TreeNode> subNodes = new LinkedList<>();
+        todoNodes.add(node);
+        while (!todoNodes.isEmpty()) {
+            System.out.println(todoNodes.size());
+            TreeNode treeNode = todoNodes.remove(0);
+            System.out.println(treeNode);
+            if (treeNode.getChildren().isEmpty()) {
+                LinkedList<TreeNode> way = new LinkedList<>();
+                TreeNode current = treeNode;
+                while (current != null) {
+                    way.add(0, current);
+                    current = current.getParent();
+                }
+                ways.add(way);
+            }
+
+            for (TreeNode subNode : treeNode.getChildren()) {
+                subNodes.add(subNode);
+            }
+            if (todoNodes.isEmpty()) {
+                todoNodes.addAll(subNodes);
+                subNodes.clear();
+            }
+        }
+        return ways;
+    }
+
+    /**
+     * 用dijkstra算法选最短路径
+     * @param tileTable
+     * @param way
+     */
     public static void getBestWay (int[][] tileTable, List<Tile> way) {
         List<Tile> S = new ArrayList<>();
         List<Tile> T = new ArrayList<>();
@@ -378,7 +538,12 @@ public class AStarSearch {
         }
     }
 
-
+    /**
+     * 获取列表中最小的
+     * @param hashMap
+     * @param exceptList
+     * @return
+     */
     public static Map.Entry<Integer, Integer> getMinEntry (HashMap<Integer, Integer> hashMap, List<Tile> exceptList) {
         int minValue = Integer.MAX_VALUE;
         Map.Entry<Integer, Integer> minEntry = null;
@@ -503,7 +668,11 @@ public class AStarSearch {
         return bottomTile;
     }
 
-
+    /**
+     * 计算瓦片到结束节点的距离
+     * @param tile
+     * @return
+     */
     public static int getTileToEndTileDistance (Tile tile) {
         int tileXIndex = tile.getXIndex();
         int tileYIndex = tile.getYIndex();
@@ -511,6 +680,12 @@ public class AStarSearch {
         int endTileYIndex = endTile.getYIndex();
         return Math.abs((endTileXIndex - tileXIndex)) + Math.abs((endTileYIndex - tileYIndex));
     }
+
+    /**
+     * 计算瓦片到开始节点的距离
+     * @param tile
+     * @return
+     */
     public static int getTileToStartTileDistance (Tile tile) {
         int tileXIndex = tile.getXIndex();
         int tileYIndex = tile.getYIndex();
@@ -521,7 +696,7 @@ public class AStarSearch {
 
 
     public static void main(String[] args) {
-        AStarSearch aStarSearch = new AStarSearch();
+        aStarSearch = new AStarSearch();
 
         /**
          * 填充地图
